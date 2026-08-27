@@ -1,0 +1,27 @@
+{
+  "name": "astra-ai",
+  "version": "0.1.0",
+  "description": "Internal CLI that keeps every repo on the required, up-to-date AI skills.",
+  "bin": {
+    "astra-ai": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
