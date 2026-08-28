@@ -8,7 +8,7 @@ export function doctor(): void {
 
   if (!configExists()) {
     console.log(`  ${pc.red("✗")} ${CONFIG_FILE} not found`);
-    console.log(pc.dim("\n  Run `astra-ai init` to get started."));
+    console.log(pc.dim("\n  Run `astra skills init` to get started."));
     return;
   }
   console.log(`  ${pc.green("✓")} ${CONFIG_FILE} found`);
@@ -32,7 +32,7 @@ export function doctor(): void {
   } else {
     console.log(
       pc.yellow(`${missing.length} skill(s) out of sync.`) +
-        pc.dim("  Run `astra-ai sync`, then `astra-ai check`.")
+        pc.dim("  Run `astra skills sync`, then `astra skills check`.")
     );
   }
 }

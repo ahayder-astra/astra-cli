@@ -16,7 +16,7 @@ interface Row {
 }
 
 /**
- * Compare what `.astra-ai.yml` requires against what is actually installed.
+ * Compare what `.astra.yml` requires against what is actually installed.
  * Prints a report. In --ci mode, exits non-zero if anything is wrong so the
  * pipeline fails — this is the "hard enforcement" layer.
  */
@@ -61,7 +61,7 @@ export function check(options: CheckOptions = {}): void {
 
   console.log(
     pc.red(`${problems.length} skill(s) missing or outdated.`) +
-      pc.dim("  Run `astra-ai sync` to fix.")
+      pc.dim("  Run `astra skills sync` to fix.")
   );
 
   if (options.ci) {

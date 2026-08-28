@@ -1,9 +1,9 @@
 {
-  "name": "astra-ai",
+  "name": "astra-cli",
   "version": "0.1.0",
-  "description": "Internal CLI that keeps every repo on the required, up-to-date AI skills.",
+  "description": "Internal CLI for Astra. Keeps every repo on the required, up-to-date AI skills.",
   "bin": {
-    "astra-ai": "./dist/index.js"
+    "astra": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",

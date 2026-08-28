@@ -4,7 +4,7 @@ import { readInstalled, writeInstalled } from "../lib/installed";
 import { fetchSkill } from "../lib/registry";
 
 /**
- * Download/update the skills required by `.astra-ai.yml` into the repo,
+ * Download/update the skills required by `.astra.yml` into the repo,
  * then record what was installed in the manifest so `check` can verify it.
  */
 export function sync(): void {
@@ -13,7 +13,7 @@ export function sync(): void {
   const entries = Object.entries(config.skills);
 
   if (entries.length === 0) {
-    console.log(pc.dim("No skills listed in .astra-ai.yml. Nothing to sync."));
+    console.log(pc.dim("No skills listed in .astra.yml. Nothing to sync."));
     return;
   }
 

@@ -12,7 +12,7 @@ interface InitOptions {
 
 /**
  * Bootstrap Astra AI in the current repo: detect the profile, confirm, and
- * write `.astra-ai.yml`. Refuses to overwrite an existing config unless --force.
+ * write `.astra.yml`. Refuses to overwrite an existing config unless --force.
  */
 export async function init(options: InitOptions = {}): Promise<void> {
   if (configExists() && !options.force) {
@@ -51,7 +51,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
   console.log();
 
   if (!options.yes) {
-    const ok = await confirm("Create .astra-ai.yml with these skills?");
+    const ok = await confirm("Create .astra.yml with these skills?");
     if (!ok) {
       console.log(pc.dim("Aborted."));
       return;
@@ -60,5 +60,5 @@ export async function init(options: InitOptions = {}): Promise<void> {
 
   writeConfig({ profile, skills });
   console.log(pc.green(`Created ${CONFIG_FILE}.`));
-  console.log(pc.dim("Next: run `astra-ai sync` to download the skills."));
+  console.log(pc.dim("Next: run `astra skills sync` to download the skills."));
 }

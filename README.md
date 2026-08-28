@@ -16,13 +16,13 @@ node dist/index.js doctor  # run the built CLI
 
 | Command | What it does |
 |---|---|
-| `astra-ai init` | Detect repo type, suggest a profile, create `.astra-ai.yml`. |
-| `astra-ai sync` | Download/update the skills this repo requires. |
-| `astra-ai check` | Report missing or outdated skills. |
-| `astra-ai check --ci` | Same, but exit non-zero on any problem (fails the PR). |
-| `astra-ai doctor` | Show this repo's AI setup and any problems. |
+| `astra skills init` | Detect repo type, suggest a profile, create `.astra.yml`. |
+| `astra skills sync` | Download/update the skills this repo requires. |
+| `astra skills check` | Report missing or outdated skills. |
+| `astra skills check --ci` | Same, but exit non-zero on any problem (fails the PR). |
+| `astra skills doctor` | Show this repo's AI setup and any problems. |
 
-## The contract: `.astra-ai.yml`
+## The contract: `.astra.yml`
 
 Committed to each repo and version-controlled like `package.json`. It is the
 source of truth for what that repo requires — never changed silently.
@@ -42,7 +42,7 @@ src/
   index.ts            # commander setup — wires up the 4 commands
   commands/           # one file per command
   lib/
-    config.ts         # read/write .astra-ai.yml
+    config.ts         # read/write .astra.yml
     installed.ts      # tracks what sync actually wrote (manifest.json)
     policy.ts         # central baseline + profile skills  (TODO: load from git)
     detect.ts         # guess profile from package.json / go.mod / etc.
