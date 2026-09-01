@@ -1,26 +1,31 @@
-# Astra AI CLI
+# Astra CLI
 
 Internal CLI that keeps every repo on the required, up-to-date AI skills.
 Local runs help developers; **CI is the final enforcement layer.**
+
+This repo is both the **CLI** (`src/`) and the **central source of truth for the
+skills** (`skills/`) — a monorepo. Consumer repos sync skills from here and
+publish improvements back here as versioned PRs.
 
 ## Develop
 
 ```bash
 npm install
-npm run dev -- doctor      # run from source (tsx), no build needed
-npm run build              # compile to dist/
-node dist/index.js doctor  # run the built CLI
+npm run dev -- skills doctor   # run from source (tsx), no build needed
+npm run build                  # compile to dist/
+node dist/index.js skills doctor
 ```
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `astra skills init` | Detect repo type, suggest a profile, create `.astra.yml`. |
-| `astra skills sync` | Download/update the skills this repo requires. |
-| `astra skills check` | Report missing or outdated skills. |
-| `astra skills check --ci` | Same, but exit non-zero on any problem (fails the PR). |
-| `astra skills doctor` | Show this repo's AI setup and any problems. |
+| Command | Direction | What it does |
+|---|---|---|
+| `astra skills init` | — | Detect repo type, suggest a profile, create `.astra.yml`. |
+| `astra skills sync` | ⬇ pull | Download/update the skills this repo requires. |
+| `astra skills check` | — | Report missing or outdated skills. |
+| `astra skills check --ci` | — | Same, but exit non-zero on any problem (fails the PR). |
+| `astra skills doctor` | — | Show this repo's AI setup and any problems. |
+| `astra skills publish <name>` | ⬆ push | Publish local edits to a skill back to central as a new version (via PR). |
 
 ## The contract: `.astra.yml`
 
@@ -35,23 +40,64 @@ skills:
   frontend-conventions: 2.1.0
 ```
 
+## The skills registry: `skills/`
+
+Each skill owns its version in its own `skill.yml`; `policy.yml` maps repo
+profiles to the skills they get (no versions there — "latest" is whatever each
+`skill.yml` declares).
+
+```
+skills/
+  policy.yml                     # baseline + profiles -> which skills
+  frontend-conventions/
+    skill.yml                    # name, version, description
+    SKILL.md                     # the content agents follow
+```
+
+## Publishing a skill change
+
+From inside a consumer repo where the skill is synced:
+
+```bash
+# 1. edit the skill in place
+$EDITOR .astra/skills/frontend-conventions/SKILL.md
+# 2. push it back up as a new version (prompts patch/minor/major)
+astra skills publish frontend-conventions
+```
+
+`publish` clones/updates the central repo in `~/.astra/registry`, bumps the
+skill's version, and opens a PR. It refuses if the skill wasn't synced here, or
+if central has moved ahead of the version you synced from (clobber protection).
+
+### Configuration
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `ASTRA_REGISTRY_URL` | `git@github.com:ahayder/astra-cli.git` | Central repo to clone/push. |
+| `ASTRA_REGISTRY_DIR` | `~/.astra/registry` | Local clone used for publishing. |
+| `ASTRA_HOME` | `~/.astra` | Base dir for CLI state. |
+
 ## Where things live in the code
 
 ```
 src/
-  index.ts            # commander setup — wires up the 4 commands
-  commands/           # one file per command
+  index.ts            # commander — wires up `astra skills <cmd>`
+  commands/           # init · sync · check · doctor · publish
   lib/
     config.ts         # read/write .astra.yml
-    installed.ts      # tracks what sync actually wrote (manifest.json)
-    policy.ts         # central baseline + profile skills  (TODO: load from git)
+    installed.ts      # tracks what sync wrote (manifest.json)
+    paths.ts          # package/registry path + config resolution
+    registry.ts       # read policy/skills; clone & manage central for publish
+    policy.ts         # resolve profile -> required skills (+ versions)
     detect.ts         # guess profile from package.json / go.mod / etc.
-    registry.ts       # fetch a skill  (TODO: git clone/pull the central repo)
+    semver.ts         # version bumping
+    fsutil.ts         # copy / compare skill folders
+    prompt.ts         # y/N and patch/minor/major prompts
 ```
 
-## Not built yet (the real seams)
+## Not built yet
 
-- `policy.ts` — fetch the central policy from the skills git repo instead of the
-  inlined constant.
-- `registry.ts` — clone/pull the central skills repo into a cache and copy the
-  tagged version, instead of writing a placeholder.
+- `astra skills upgrade` — bump `.astra.yml` to central's latest versions (for
+  now, hand-edit `.astra.yml` then `sync`).
+- Strict historical pinning — `sync` installs central's current version; exact
+  older versions via git tags is a future enhancement.

@@ -1,7 +1,7 @@
 import pc from "picocolors";
 import { CONFIG_FILE, configExists, writeConfig } from "../lib/config";
 import { detectProfile } from "../lib/detect";
-import { skillsForProfile, POLICY } from "../lib/policy";
+import { skillsForProfile, knownProfiles } from "../lib/policy";
 import { confirm } from "../lib/prompt";
 
 interface InitOptions {
@@ -23,7 +23,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
     return;
   }
 
-  const known = Object.keys(POLICY.profiles);
+  const known = knownProfiles();
   let profile = options.profile ?? detectProfile() ?? null;
 
   if (options.profile && !known.includes(options.profile)) {

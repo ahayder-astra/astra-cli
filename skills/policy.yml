@@ -1,0 +1,15 @@
+# policy.yml — the central skill policy.
+#
+# Defines WHICH skills apply to each repo type. Versions are NOT listed here;
+# each skill owns its version in skills/<name>/skill.yml. "Latest" for a skill
+# is whatever version its own skill.yml declares.
+
+baseline:
+  - velox-submit
+  - testing
+
+profiles:
+  frontend:
+    - frontend-conventions
+  backend:
+    - backend-conventions

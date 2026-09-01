@@ -1,11 +1,12 @@
 import pc from "picocolors";
 import { readConfig } from "../lib/config";
 import { readInstalled, writeInstalled } from "../lib/installed";
-import { fetchSkill } from "../lib/registry";
+import { installSkill } from "../lib/registry";
 
 /**
- * Download/update the skills required by `.astra.yml` into the repo,
- * then record what was installed in the manifest so `check` can verify it.
+ * Download/update the skills required by `.astra.yml` into the repo, copying
+ * real content from the registry, then record what was installed so `check`
+ * can verify it.
  */
 export function sync(): void {
   const config = readConfig();
@@ -18,15 +19,15 @@ export function sync(): void {
   }
 
   let changed = 0;
-  for (const [name, version] of entries) {
+  for (const [name] of entries) {
+    const version = installSkill(name);
     if (installed[name] === version) {
       console.log(`  ${pc.dim("=")} ${name} ${pc.dim(version)} (up to date)`);
-      continue;
+    } else {
+      installed[name] = version;
+      changed++;
+      console.log(`  ${pc.green("↓")} ${name} ${pc.dim(version)}`);
     }
-    fetchSkill(name, version);
-    installed[name] = version;
-    changed++;
-    console.log(`  ${pc.green("↓")} ${name} ${pc.dim(version)}`);
   }
 
   writeInstalled(installed);

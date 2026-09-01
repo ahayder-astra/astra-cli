@@ -1,32 +1,20 @@
-/**
- * The central skill policy.
- *
- * In the real system this is fetched from the central git repo. For now it's
- * inlined so the CLI works end-to-end. Versions here are the "latest known"
- * versions the central repo publishes.
- */
-export interface Policy {
-  baseline: Record<string, string>;
-  profiles: Record<string, Record<string, string>>;
+import { currentVersion, readPolicy } from "./registry";
+
+/** Names of the profiles defined in the central policy. */
+export function knownProfiles(): string[] {
+  return Object.keys(readPolicy().profiles);
 }
 
-export const POLICY: Policy = {
-  baseline: {
-    "velox-submit": "1.2.0",
-    testing: "1.4.0",
-  },
-  profiles: {
-    frontend: {
-      "frontend-conventions": "2.1.0",
-    },
-    backend: {
-      "backend-conventions": "1.0.0",
-    },
-  },
-};
-
-/** Resolve the full set of required skills for a profile (baseline + profile). */
+/**
+ * Resolve the full set of required skills for a profile (baseline + profile),
+ * pinned to each skill's current registry version.
+ */
 export function skillsForProfile(profile: string): Record<string, string> {
-  const profileSkills = POLICY.profiles[profile] ?? {};
-  return { ...POLICY.baseline, ...profileSkills };
+  const policy = readPolicy();
+  const names = [...policy.baseline, ...(policy.profiles[profile] ?? [])];
+  const skills: Record<string, string> = {};
+  for (const name of names) {
+    skills[name] = currentVersion(name);
+  }
+  return skills;
 }

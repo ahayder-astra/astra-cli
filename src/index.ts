@@ -5,6 +5,7 @@ import { init } from "./commands/init";
 import { sync } from "./commands/sync";
 import { check } from "./commands/check";
 import { doctor } from "./commands/doctor";
+import { publish } from "./commands/publish";
 
 const program = new Command();
 
@@ -42,6 +43,15 @@ skills
   .command("doctor")
   .description("Show this repo's AI setup and any problems.")
   .action(() => doctor());
+
+skills
+  .command("publish <name>")
+  .description("Publish local edits to a skill back to central as a new version (via PR).")
+  .option("--patch", "bump the patch version")
+  .option("--minor", "bump the minor version")
+  .option("--major", "bump the major version")
+  .option("-y, --yes", "accept the default (patch) without prompting")
+  .action((name, opts) => publish(name, opts));
 
 // Turn thrown errors (e.g. missing config) into clean messages, not stack traces.
 async function main() {
