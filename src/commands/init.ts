@@ -1,18 +1,20 @@
 import pc from "picocolors";
 import { CONFIG_FILE, configExists, writeConfig } from "../lib/config";
-import { detectProfile } from "../lib/detect";
-import { skillsForProfile, knownProfiles } from "../lib/policy";
+import { skillsForProject, knownProjects } from "../lib/policy";
 import { confirm } from "../lib/prompt";
 
 interface InitOptions {
-  profile?: string;
+  project?: string;
   yes?: boolean;
   force?: boolean;
 }
 
 /**
- * Bootstrap Astra AI in the current repo: detect the profile, confirm, and
- * write `.astra.yml`. Refuses to overwrite an existing config unless --force.
+ * Bootstrap Astra in the current repo: pick the project, confirm, and write
+ * `.astra.yml`. Refuses to overwrite an existing config unless --force.
+ *
+ * The project can't be reliably auto-detected (AnimoFrontend vs AnimoNext both
+ * look like React), so it must be given explicitly via --project.
  */
 export async function init(options: InitOptions = {}): Promise<void> {
   if (configExists() && !options.force) {
@@ -23,30 +25,30 @@ export async function init(options: InitOptions = {}): Promise<void> {
     return;
   }
 
-  const known = knownProfiles();
-  let profile = options.profile ?? detectProfile() ?? null;
+  const known = knownProjects();
+  const project = options.project;
 
-  if (options.profile && !known.includes(options.profile)) {
+  if (!project) {
     console.log(
-      pc.red(`Unknown profile "${options.profile}".`) +
-        pc.dim(`  Known profiles: ${known.join(", ")}`)
+      pc.yellow("Specify which project this repo is with --project.") +
+        pc.dim(`\n  Known projects: ${known.join(", ")}`)
     );
     process.exit(1);
   }
 
-  if (!profile) {
+  if (!known.includes(project)) {
     console.log(
-      pc.yellow("Could not detect repo type.") +
-        pc.dim(`  Pass --profile <${known.join("|")}>`)
+      pc.red(`Unknown project "${project}".`) +
+        pc.dim(`\n  Known projects: ${known.join(", ")}`)
     );
     process.exit(1);
   }
 
-  console.log(`Detected profile: ${pc.cyan(profile)}`);
-  const skills = skillsForProfile(profile);
+  console.log(`Project: ${pc.cyan(project)}`);
+  const skills = skillsForProject(project);
   console.log(pc.dim("Will require:"));
-  for (const [name, version] of Object.entries(skills)) {
-    console.log(pc.dim(`  - ${name} ${version}`));
+  for (const [id, version] of Object.entries(skills)) {
+    console.log(pc.dim(`  - ${id} ${version}`));
   }
   console.log();
 
@@ -58,7 +60,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
     }
   }
 
-  writeConfig({ profile, skills });
+  writeConfig({ project, skills });
   console.log(pc.green(`Created ${CONFIG_FILE}.`));
   console.log(pc.dim("Next: run `astra skills sync` to download the skills."));
 }

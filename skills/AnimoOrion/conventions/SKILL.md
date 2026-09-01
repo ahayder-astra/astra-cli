@@ -1,6 +1,6 @@
-# backend-conventions
+# AnimoOrion conventions
 
-Conventions for backend service repos.
+Conventions for the AnimoOrion backend service.
 
 ## Rules
 

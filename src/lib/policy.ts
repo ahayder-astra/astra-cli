@@ -1,20 +1,23 @@
 import { currentVersion, readPolicy } from "./registry";
 
-/** Names of the profiles defined in the central policy. */
-export function knownProfiles(): string[] {
-  return Object.keys(readPolicy().profiles);
+/** Names of the projects defined in the central policy. */
+export function knownProjects(): string[] {
+  return Object.keys(readPolicy().projects);
 }
 
 /**
- * Resolve the full set of required skills for a profile (baseline + profile),
- * pinned to each skill's current registry version.
+ * Resolve the full set of required skills for a project — common skills plus
+ * the project's own — as a map of scoped id (`scope/name`) to current version.
  */
-export function skillsForProfile(profile: string): Record<string, string> {
+export function skillsForProject(project: string): Record<string, string> {
   const policy = readPolicy();
-  const names = [...policy.baseline, ...(policy.profiles[profile] ?? [])];
+  const ids = [
+    ...policy.common.map((name) => `common/${name}`),
+    ...(policy.projects[project] ?? []).map((name) => `${project}/${name}`),
+  ];
   const skills: Record<string, string> = {};
-  for (const name of names) {
-    skills[name] = currentVersion(name);
+  for (const id of ids) {
+    skills[id] = currentVersion(id);
   }
   return skills;
 }

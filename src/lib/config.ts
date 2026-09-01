@@ -11,11 +11,12 @@ export const SKILLS_DIR = ".astra/skills";
 /**
  * Shape of `.astra.yml`.
  *
- * profile: the repo type (frontend, backend, ...) — informational after init.
- * skills:  the contract — a map of skill name -> required version.
+ * project: which project this repo is (AnimoFrontend, Velox, ...).
+ * skills:  the contract — a map of scoped skill id (`scope/name`, e.g.
+ *          `common/testing` or `AnimoFrontend/conventions`) -> required version.
  */
 export interface AstraConfig {
-  profile: string;
+  project: string;
   skills: Record<string, string>;
 }
 
@@ -45,7 +46,7 @@ export function readConfig(repoRoot: string = process.cwd()): AstraConfig {
 
   const cfg = raw as Partial<AstraConfig>;
   return {
-    profile: cfg.profile ?? "unknown",
+    project: cfg.project ?? "unknown",
     skills: cfg.skills ?? {},
   };
 }

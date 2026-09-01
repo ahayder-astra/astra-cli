@@ -6,10 +6,15 @@ import { SKILLS_DIR } from "./config";
 import { copyFiles } from "./fsutil";
 import { registryDir, registryUrl, skillsRoot } from "./paths";
 
-/** policy.yml shape: which skills apply to baseline + each profile. */
+/**
+ * policy.yml shape.
+ * `common` skills apply to every repo. `projects` maps each project to the
+ * skills specific to it (on top of common). Entries are skill names within
+ * their scope.
+ */
 export interface Policy {
-  baseline: string[];
-  profiles: Record<string, string[]>;
+  common: string[];
+  projects: Record<string, string[]>;
 }
 
 /** skill.yml shape: a skill owns its own version. */
@@ -23,44 +28,58 @@ export interface SkillMeta {
 export function readPolicy(): Policy {
   const file = path.join(skillsRoot(), "policy.yml");
   const raw = yaml.load(fs.readFileSync(file, "utf8")) as Partial<Policy>;
-  return { baseline: raw.baseline ?? [], profiles: raw.profiles ?? {} };
+  return { common: raw.common ?? [], projects: raw.projects ?? {} };
 }
 
-/** Absolute path to a skill's folder inside a given skills root. */
-function skillDir(root: string, name: string): string {
-  return path.join(root, name);
+/**
+ * Split a scoped skill id (`scope/name`) into its parts, e.g.
+ * `common/testing` -> ["common", "testing"]. Throws on an unscoped id.
+ */
+export function splitSkillId(id: string): [scope: string, name: string] {
+  const slash = id.indexOf("/");
+  if (slash <= 0 || slash === id.length - 1) {
+    throw new Error(`Skill id "${id}" must be scoped as "scope/name".`);
+  }
+  return [id.slice(0, slash), id.slice(slash + 1)];
+}
+
+/** Relative path (within skills root or `.astra/skills`) for a scoped id. */
+function skillRelPath(id: string): string {
+  const [scope, name] = splitSkillId(id);
+  return path.join(scope, name);
 }
 
 /** Read a skill's metadata (name, version, description) from its skill.yml. */
-export function readSkillMeta(name: string, root = skillsRoot()): SkillMeta {
-  const file = path.join(skillDir(root, name), "skill.yml");
+export function readSkillMeta(id: string, root = skillsRoot()): SkillMeta {
+  const file = path.join(root, skillRelPath(id), "skill.yml");
   if (!fs.existsSync(file)) {
-    throw new Error(`Unknown skill "${name}" (no ${name}/skill.yml in registry).`);
+    throw new Error(`Unknown skill "${id}" (no ${skillRelPath(id)}/skill.yml in registry).`);
   }
   const raw = yaml.load(fs.readFileSync(file, "utf8")) as Partial<SkillMeta>;
-  if (!raw.version) throw new Error(`${name}/skill.yml is missing a version.`);
+  if (!raw.version) throw new Error(`${id}/skill.yml is missing a version.`);
+  const [, name] = splitSkillId(id);
   return { name: raw.name ?? name, version: raw.version, description: raw.description };
 }
 
 /** The current (latest) version the registry holds for a skill. */
-export function currentVersion(name: string, root = skillsRoot()): string {
-  return readSkillMeta(name, root).version;
+export function currentVersion(id: string, root = skillsRoot()): string {
+  return readSkillMeta(id, root).version;
 }
 
 /**
  * Copy a skill's content from the registry into a consumer repo's
- * `.astra/skills/<name>/`. Returns the version that was installed.
+ * `.astra/skills/<scope>/<name>/`. Returns the version that was installed.
  */
 export function installSkill(
-  name: string,
+  id: string,
   consumerRoot: string = process.cwd()
 ): string {
   const root = skillsRoot();
-  const src = skillDir(root, name);
-  if (!fs.existsSync(src)) throw new Error(`Unknown skill "${name}".`);
-  const dest = path.join(consumerRoot, SKILLS_DIR, name);
+  const src = path.join(root, skillRelPath(id));
+  if (!fs.existsSync(src)) throw new Error(`Unknown skill "${id}".`);
+  const dest = path.join(consumerRoot, SKILLS_DIR, skillRelPath(id));
   copyFiles(src, dest);
-  return currentVersion(name, root);
+  return currentVersion(id, root);
 }
 
 /** Write a skill.yml with a given version (preserving name/description). */

@@ -19,14 +19,14 @@ export function sync(): void {
   }
 
   let changed = 0;
-  for (const [name] of entries) {
-    const version = installSkill(name);
-    if (installed[name] === version) {
-      console.log(`  ${pc.dim("=")} ${name} ${pc.dim(version)} (up to date)`);
+  for (const [id] of entries) {
+    const version = installSkill(id);
+    if (installed[id] === version) {
+      console.log(`  ${pc.dim("=")} ${id} ${pc.dim(version)} (up to date)`);
     } else {
-      installed[name] = version;
+      installed[id] = version;
       changed++;
-      console.log(`  ${pc.green("↓")} ${name} ${pc.dim(version)}`);
+      console.log(`  ${pc.green("↓")} ${id} ${pc.dim(version)}`);
     }
   }
 

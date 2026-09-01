@@ -20,7 +20,7 @@ node dist/index.js skills doctor
 
 | Command | Direction | What it does |
 |---|---|---|
-| `astra skills init` | — | Detect repo type, suggest a profile, create `.astra.yml`. |
+| `astra skills init --project <name>` | — | Set this repo's project and create `.astra.yml`. |
 | `astra skills sync` | ⬇ pull | Download/update the skills this repo requires. |
 | `astra skills check` | — | Report missing or outdated skills. |
 | `astra skills check --ci` | — | Same, but exit non-zero on any problem (fails the PR). |
@@ -33,26 +33,37 @@ Committed to each repo and version-controlled like `package.json`. It is the
 source of truth for what that repo requires — never changed silently.
 
 ```yaml
-profile: frontend
+project: AnimoFrontend
 skills:
-  velox-submit: 1.2.0
-  testing: 1.4.0
-  frontend-conventions: 2.1.0
+  common/task-submission: 1.2.0
+  common/testing: 1.4.0
+  AnimoFrontend/conventions: 1.0.0
 ```
 
 ## The skills registry: `skills/`
 
-Each skill owns its version in its own `skill.yml`; `policy.yml` maps repo
-profiles to the skills they get (no versions there — "latest" is whatever each
+Skills are organized in two layers. **`common/`** skills apply to every repo;
+each **project** folder holds the skills specific to that project. Skills are
+addressed by a scoped id — `scope/name` — so names never collide across
+projects. Each skill owns its version in its own `skill.yml`; `policy.yml` maps
+projects to the skills they get (no versions there — "latest" is whatever each
 `skill.yml` declares).
 
 ```
 skills/
-  policy.yml                     # baseline + profiles -> which skills
-  frontend-conventions/
-    skill.yml                    # name, version, description
-    SKILL.md                     # the content agents follow
+  policy.yml                     # common + projects -> which skills
+  common/
+    task-submission/             # the "velox submit" workflow, shared
+      skill.yml                  # name, version, description
+      SKILL.md                   # the content agents follow
+    testing/
+  AnimoFrontend/
+    conventions/
+  AnimoMobileApp/ · AnimoOrion/ · Velox/ · AnimoNext/
 ```
+
+Rule of thumb: a skill lives in `common/` if the rule is the same across repos;
+it lives in a project folder only if that project genuinely does it differently.
 
 ## Publishing a skill change
 
@@ -60,9 +71,9 @@ From inside a consumer repo where the skill is synced:
 
 ```bash
 # 1. edit the skill in place
-$EDITOR .astra/skills/frontend-conventions/SKILL.md
+$EDITOR .astra/skills/AnimoFrontend/conventions/SKILL.md
 # 2. push it back up as a new version (prompts patch/minor/major)
-astra skills publish frontend-conventions
+astra skills publish AnimoFrontend/conventions
 ```
 
 `publish` clones/updates the central repo in `~/.astra/registry`, bumps the
@@ -87,9 +98,8 @@ src/
     config.ts         # read/write .astra.yml
     installed.ts      # tracks what sync wrote (manifest.json)
     paths.ts          # package/registry path + config resolution
-    registry.ts       # read policy/skills; clone & manage central for publish
-    policy.ts         # resolve profile -> required skills (+ versions)
-    detect.ts         # guess profile from package.json / go.mod / etc.
+    registry.ts       # read policy/skills; scoped ids; clone central for publish
+    policy.ts         # resolve project -> required skills (+ versions)
     semver.ts         # version bumping
     fsutil.ts         # copy / compare skill folders
     prompt.ts         # y/N and patch/minor/major prompts

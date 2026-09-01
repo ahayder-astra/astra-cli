@@ -23,7 +23,7 @@ const skills = program
 skills
   .command("init")
   .description("Bootstrap Astra in the current repo (creates .astra.yml).")
-  .option("-p, --profile <profile>", "force a profile instead of detecting")
+  .option("-p, --project <project>", "which project this repo is")
   .option("-y, --yes", "skip the confirmation prompt")
   .option("-f, --force", "overwrite an existing .astra.yml")
   .action((opts) => init(opts));

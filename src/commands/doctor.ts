@@ -4,7 +4,7 @@ import { readInstalled } from "../lib/installed";
 
 /** Show the current repo's AI setup and any problems, at a glance. */
 export function doctor(): void {
-  console.log(pc.bold("Astra AI — doctor\n"));
+  console.log(pc.bold("Astra — doctor\n"));
 
   if (!configExists()) {
     console.log(`  ${pc.red("✗")} ${CONFIG_FILE} not found`);
@@ -14,7 +14,7 @@ export function doctor(): void {
   console.log(`  ${pc.green("✓")} ${CONFIG_FILE} found`);
 
   const config = readConfig();
-  console.log(`  ${pc.green("✓")} profile: ${pc.cyan(config.profile)}`);
+  console.log(`  ${pc.green("✓")} project: ${pc.cyan(config.project)}`);
 
   const required = Object.entries(config.skills);
   const installed = readInstalled();

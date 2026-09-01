@@ -10,6 +10,7 @@ import {
   ensureWorkRegistry,
   gitIn,
   readSkillMeta,
+  splitSkillId,
   writeSkillMeta,
 } from "../lib/registry";
 import { bump, BumpKind } from "../lib/semver";
@@ -31,68 +32,71 @@ function chosenBump(options: PublishOptions): BumpKind | null {
 
 /**
  * Publish local edits to a skill back to the central repo as a new version,
- * via a pull request. Refuses if the skill wasn't synced here or if central has
- * moved ahead of the version this repo synced from (clobber protection).
+ * via a pull request. `id` is a scoped skill id like `AnimoFrontend/conventions`
+ * or `common/task-submission`. Refuses if the skill wasn't synced here or if
+ * central has moved ahead of the version this repo synced from.
  */
 export async function publish(
-  name: string,
+  id: string,
   options: PublishOptions = {}
 ): Promise<void> {
+  const [, skillName] = splitSkillId(id);
+  const rel = path.join(...id.split("/"));
   const consumerRoot = process.cwd();
   const consumerSkillsRoot = path.join(consumerRoot, SKILLS_DIR);
-  const consumerSkillDir = path.join(consumerSkillsRoot, name);
+  const consumerSkillDir = path.join(consumerSkillsRoot, rel);
 
   // 1. The skill must have been synced into this repo.
   const installed = readInstalled(consumerRoot);
-  const basedVersion = installed[name];
+  const basedVersion = installed[id];
   if (!basedVersion || !fs.existsSync(consumerSkillDir)) {
     throw new Error(
-      `"${name}" isn't installed in this repo. Run \`astra skills sync\` first.`
+      `"${id}" isn't installed in this repo. Run \`astra skills sync\` first.`
     );
   }
 
   // 2. Bring the central repo clone up to date (clean base to branch from).
   console.log(pc.dim("Preparing central repo…"));
   const regDir = ensureWorkRegistry();
-  const central = readSkillMeta(name); // resolves from the fresh clone
+  const central = readSkillMeta(id); // resolves from the fresh clone
   const centralVersion = central.version;
 
   // 3. Clobber protection: central must still be at the version we synced from.
   if (centralVersion !== basedVersion) {
     throw new Error(
-      `You synced ${name}@${basedVersion}, but central is now ${centralVersion}. ` +
+      `You synced ${id}@${basedVersion}, but central is now ${centralVersion}. ` +
         `Run \`astra skills sync\`, re-apply your edit, then publish.`
     );
   }
 
   // 4. Nothing to do if the content is unchanged.
-  const regSkillDir = path.join(regDir, "skills", name);
+  const regSkillDir = path.join(regDir, "skills", rel);
   if (foldersEqual(consumerSkillDir, regSkillDir, ["skill.yml"])) {
-    console.log(pc.dim(`No changes in ${name} to publish.`));
+    console.log(pc.dim(`No changes in ${id} to publish.`));
     return;
   }
 
   // 5. Decide the new version.
   const kind = chosenBump(options) ?? (options.yes ? "patch" : await promptBump(centralVersion));
   const newVersion = bump(centralVersion, kind);
-  console.log(`Publishing ${pc.cyan(name)} ${pc.dim(`${centralVersion} → ${newVersion}`)}`);
+  console.log(`Publishing ${pc.cyan(id)} ${pc.dim(`${centralVersion} → ${newVersion}`)}`);
 
   // 6. Stage the change in the clone (content + bumped skill.yml).
   copyFiles(consumerSkillDir, regSkillDir, ["skill.yml"]);
-  const consumerMeta = readSkillMeta(name, consumerSkillsRoot);
+  const consumerMeta = readSkillMeta(id, consumerSkillsRoot);
   writeSkillMeta(regSkillDir, {
-    name,
+    name: skillName,
     version: newVersion,
     description: consumerMeta.description ?? central.description,
   });
 
   // 7. Branch, commit, push.
-  const branch = `skill/${name}-${newVersion}`;
+  const branch = `skill/${id.replace(/\//g, "-")}-${newVersion}`;
   const base = defaultBranch(regDir);
   try {
     gitIn(["checkout", "-b", branch], regDir);
-    gitIn(["add", path.join("skills", name)], regDir);
-    gitIn(["commit", "-m", `Update ${name} to ${newVersion}`], regDir);
+    gitIn(["add", path.join("skills", rel)], regDir);
+    gitIn(["commit", "-m", `Update ${id} to ${newVersion}`], regDir);
     gitIn(["push", "-u", "origin", branch], regDir);
   } catch (err) {
     throw new Error(
@@ -102,9 +106,9 @@ export async function publish(
   }
 
   // 8. Open a PR (best effort; fall back to instructions if gh is unavailable).
-  const title = `Update ${name} to ${newVersion}`;
+  const title = `Update ${id} to ${newVersion}`;
   const body =
-    `Publishes ${name}@${newVersion} (was ${centralVersion}).\n\n` +
+    `Publishes ${id}@${newVersion} (was ${centralVersion}).\n\n` +
     `Opened by \`astra skills publish\`.`;
   try {
     const url = execFileSync(

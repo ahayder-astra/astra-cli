@@ -1,15 +1,24 @@
 # policy.yml — the central skill policy.
 #
-# Defines WHICH skills apply to each repo type. Versions are NOT listed here;
-# each skill owns its version in skills/<name>/skill.yml. "Latest" for a skill
-# is whatever version its own skill.yml declares.
+# `common` skills apply to every repo. `projects` lists the skills specific to
+# each project, on top of common. Entries are skill names within their scope:
+# a common entry `testing` lives at skills/common/testing/, a project entry
+# `conventions` under AnimoFrontend lives at skills/AnimoFrontend/conventions/.
+#
+# Versions are NOT listed here — each skill owns its version in its skill.yml.
 
-baseline:
-  - velox-submit
+common:
+  - task-submission
   - testing
 
-profiles:
-  frontend:
-    - frontend-conventions
-  backend:
-    - backend-conventions
+projects:
+  AnimoFrontend:
+    - conventions
+  AnimoMobileApp:
+    - conventions
+  AnimoOrion:
+    - conventions
+  Velox:
+    - conventions
+  AnimoNext:
+    - conventions
