@@ -13,7 +13,7 @@ Add it as a **dev dependency** — no global or separate install needed. It buil
 itself on install and links an `astra` command into `node_modules/.bin`.
 
 ```bash
-npm install -D github:ahayder/astra-cli
+npm install -D github:ahayder-astra/astra-cli
 ```
 
 Then run it with `npx`, or wire it into your scripts and CI:
@@ -146,7 +146,7 @@ registration* and leaves your local copy untouched.
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `ASTRA_REGISTRY_URL` | `git@github.com:ahayder/astra-cli.git` | Central repo to clone/push. |
+| `ASTRA_REGISTRY_URL` | `git@github.com:ahayder-astra/astra-cli.git` | Central repo to clone/push. |
 | `ASTRA_REGISTRY_DIR` | `~/.astra/registry` | Local clone used for publishing. |
 | `ASTRA_HOME` | `~/.astra` | Base dir for CLI state. |
 

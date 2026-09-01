@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 /** Default central repo to publish skills to / sync them from. */
-export const DEFAULT_REGISTRY_URL = "git@github.com:ahayder/astra-cli.git";
+export const DEFAULT_REGISTRY_URL = "git@github.com:ahayder-astra/astra-cli.git";
 
 /** Root of the installed CLI package (one level above dist/ or src/lib/..). */
 export function packageRoot(): string {
