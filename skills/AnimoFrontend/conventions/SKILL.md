@@ -8,3 +8,5 @@ Conventions for the AnimoFrontend React web app.
 - Co-locate a component's styles and tests with the component.
 - Data fetching lives in hooks, not inside JSX.
 - Prefer composition over inheritance; keep components small.
+
+- Name files after their default export (PascalCase for components).
