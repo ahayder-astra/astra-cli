@@ -78,18 +78,26 @@ export async function init(options: InitOptions = {}): Promise<void> {
 
   // 2. Match against known projects; refresh the central clone before deciding
   //    it's new, so a recently-added project isn't re-created.
-  let known = knownProjects();
-  if (!known.includes(name)) {
+  let canonical = matchProject(name, knownProjects());
+  if (!canonical) {
     console.log(pc.dim("Checking central registry…"));
     ensureWorkRegistry();
-    known = knownProjects();
+    canonical = matchProject(name, knownProjects());
   }
 
-  if (known.includes(name)) {
-    await adopt(name, options, repoRoot);
+  if (canonical) {
+    if (canonical !== name) {
+      console.log(pc.dim(`Matched "${name}" → ${canonical}`));
+    }
+    await adopt(canonical, options, repoRoot);
   } else {
     await createNew(name, options, repoRoot);
   }
+}
+
+/** Find a known project matching `name` case-insensitively; returns canonical. */
+function matchProject(name: string, known: string[]): string | undefined {
+  return known.find((p) => p.toLowerCase() === name.toLowerCase());
 }
 
 /** Existing project: pin common + the project's skills and write .astra.yml. */
