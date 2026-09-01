@@ -5,9 +5,11 @@ import { SKILLS_DIR } from "../lib/config";
 import { copyFiles, foldersEqual } from "../lib/fsutil";
 import { promptBump } from "../lib/prompt";
 import {
+  addSkillToPolicy,
   commitAndOpenPr,
   ensureWorkRegistry,
   readSkillMeta,
+  skillExists,
   splitSkillId,
   writeSkillMeta,
 } from "../lib/registry";
@@ -56,6 +58,14 @@ export async function publish(
   // 2. Bring the central repo clone up to date (clean base to branch from).
   console.log(pc.dim("Preparing central repo…"));
   const regDir = ensureWorkRegistry();
+
+  // 2a. If the skill doesn't exist centrally yet, this is its initial
+  //     registration rather than an update.
+  if (!skillExists(id, path.join(regDir, "skills"))) {
+    registerNewSkill(id, rel, skillName, consumerSkillDir, consumerSkillsRoot, regDir);
+    return;
+  }
+
   const central = readSkillMeta(id); // resolves from the fresh clone
   const centralVersion = central.version;
 
@@ -97,6 +107,40 @@ export async function publish(
     title: `Update ${id} to ${newVersion}`,
     body:
       `Publishes ${id}@${newVersion} (was ${centralVersion}).\n\n` +
+      `Opened by \`astra skills publish\`.`,
+  });
+  reportPr(url, branch);
+}
+
+/**
+ * Register a brand-new skill centrally: copy its content into the clone, add it
+ * to policy.yml under its scope, and open a PR at its declared version.
+ */
+function registerNewSkill(
+  id: string,
+  rel: string,
+  skillName: string,
+  consumerSkillDir: string,
+  consumerSkillsRoot: string,
+  regDir: string
+): void {
+  const [scope] = splitSkillId(id);
+  const meta = readSkillMeta(id, consumerSkillsRoot);
+  const version = meta.version;
+  console.log(`Registering new skill ${pc.cyan(id)} ${pc.dim(`@ ${version}`)}`);
+
+  const regSkillDir = path.join(regDir, "skills", rel);
+  copyFiles(consumerSkillDir, regSkillDir); // includes skill.yml as authored
+  addSkillToPolicy(regDir, scope, skillName);
+
+  const branch = `skill/${id.replace(/\//g, "-")}-${version}`;
+  const url = commitAndOpenPr(regDir, {
+    branch,
+    addPaths: [path.join("skills", rel), path.join("skills", "policy.yml")],
+    commitMsg: `Add skill ${id} (${version})`,
+    title: `Add skill ${id} (${version})`,
+    body:
+      `Registers a new skill ${id}@${version}.\n\n` +
       `Opened by \`astra skills publish\`.`,
   });
   reportPr(url, branch);

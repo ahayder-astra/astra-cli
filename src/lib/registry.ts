@@ -172,6 +172,45 @@ export function scaffoldProject(regDir: string, name: string): string[] {
   return [path.join("skills", name), path.join("skills", "policy.yml")];
 }
 
+/** True if a skill folder (`skills/<scope>/<name>/`) exists in the given root. */
+export function skillExists(id: string, root = skillsRoot()): boolean {
+  return fs.existsSync(path.join(root, skillRelPath(id)));
+}
+
+function policyPathIn(regDir: string): string {
+  return path.join(regDir, "skills", "policy.yml");
+}
+function readPolicyFile(regDir: string): Policy {
+  const raw = yaml.load(fs.readFileSync(policyPathIn(regDir), "utf8")) as Partial<Policy>;
+  return { common: raw.common ?? [], projects: raw.projects ?? {} };
+}
+function writePolicyFile(regDir: string, policy: Policy): void {
+  const header =
+    "# policy.yml — the central skill policy.\n" +
+    "# `common` applies to every repo; `projects` lists each project's own skills.\n" +
+    "# Versions live in each skill's skill.yml, not here.\n\n";
+  fs.writeFileSync(
+    policyPathIn(regDir),
+    header + yaml.dump(policy, { sortKeys: false }),
+    "utf8"
+  );
+}
+
+/**
+ * Register an existing skill name under a scope in policy.yml (idempotent).
+ * `scope` is either "common" or a project name.
+ */
+export function addSkillToPolicy(regDir: string, scope: string, name: string): void {
+  const policy = readPolicyFile(regDir);
+  if (scope === "common") {
+    if (!policy.common.includes(name)) policy.common.push(name);
+  } else {
+    policy.projects[scope] = policy.projects[scope] ?? [];
+    if (!policy.projects[scope].includes(name)) policy.projects[scope].push(name);
+  }
+  writePolicyFile(regDir, policy);
+}
+
 export interface PrRequest {
   branch: string;
   addPaths: string[];

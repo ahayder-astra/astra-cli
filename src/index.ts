@@ -6,6 +6,7 @@ import { sync } from "./commands/sync";
 import { check } from "./commands/check";
 import { doctor } from "./commands/doctor";
 import { publish } from "./commands/publish";
+import { newSkill } from "./commands/new";
 import { closePrompts } from "./lib/prompt";
 
 const program = new Command();
@@ -53,6 +54,11 @@ skills
   .option("--major", "bump the major version")
   .option("-y, --yes", "accept the default (patch) without prompting")
   .action((name, opts) => publish(name, opts));
+
+skills
+  .command("new <name>")
+  .description("Scaffold a new skill in this repo (publish it later to register centrally).")
+  .action((name) => newSkill(name));
 
 // Turn thrown errors (e.g. missing config) into clean messages, not stack traces.
 async function main() {

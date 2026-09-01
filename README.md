@@ -7,7 +7,33 @@ This repo is both the **CLI** (`src/`) and the **central source of truth for the
 skills** (`skills/`) — a monorepo. Consumer repos sync skills from here and
 publish improvements back here as versioned PRs.
 
+## Install in your repo
+
+Add it as a **dev dependency** — no global or separate install needed. It builds
+itself on install and links an `astra` command into `node_modules/.bin`.
+
+```bash
+npm install -D github:ahayder/astra-cli
+```
+
+Then run it with `npx`, or wire it into your scripts and CI:
+
+```jsonc
+// package.json
+"scripts": {
+  "skills:sync": "astra skills sync",
+  "skills:check": "astra skills check --ci"   // fails the build on drift
+}
+```
+
+```bash
+npx astra skills init      # onboard the repo (writes .astra.yml)
+npx astra skills sync       # pull the skills this repo requires
+```
+
 ## Develop
+
+Working on the CLI itself (this repo):
 
 ```bash
 npm install
@@ -25,7 +51,8 @@ node dist/index.js skills doctor
 | `astra skills check` | — | Report missing or outdated skills. |
 | `astra skills check --ci` | — | Same, but exit non-zero on any problem (fails the PR). |
 | `astra skills doctor` | — | Show this repo's AI setup and any problems. |
-| `astra skills publish <name>` | ⬆ push | Publish local edits to a skill back to central as a new version (via PR). |
+| `astra skills new <name>` | — | Scaffold a new skill in this repo (publish it later to register centrally). |
+| `astra skills publish <name>` | ⬆ push | Publish a skill to central via PR — bumps an existing skill, or registers a brand-new one. |
 
 ## The contract: `.astra.yml`
 
@@ -94,8 +121,26 @@ astra skills publish AnimoFrontend/conventions
 ```
 
 `publish` clones/updates the central repo in `~/.astra/registry`, bumps the
-skill's version, and opens a PR. It refuses if the skill wasn't synced here, or
-if central has moved ahead of the version you synced from (clobber protection).
+skill's version, and opens a PR. It refuses if central has moved ahead of the
+version you synced from (clobber protection).
+
+## Creating a new skill
+
+`.astra/skills/` is committed to each repo (not gitignored — nothing to change
+per repo). The manifest tells managed skills (synced from central) apart from
+new ones you author locally, so `sync` never clobbers your work.
+
+```bash
+# scaffold a skill scoped to this repo's project (or common/<name>)
+astra skills new test-skill
+$EDITOR .astra/skills/<Project>/test-skill/SKILL.md
+# the first publish registers it centrally (adds it to policy.yml) via PR;
+# later publishes bump its version
+astra skills publish <Project>/test-skill
+```
+
+Until the registration PR merges, `sync` shows the new skill as *pending central
+registration* and leaves your local copy untouched.
 
 ### Configuration
 
