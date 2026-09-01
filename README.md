@@ -20,7 +20,7 @@ node dist/index.js skills doctor
 
 | Command | Direction | What it does |
 |---|---|---|
-| `astra skills init --project <name>` | — | Set this repo's project and create `.astra.yml`. |
+| `astra skills init` | — | Interactive wizard: pick the project (suggested from package.json), create `.astra.yml`; registers a brand-new project via PR. |
 | `astra skills sync` | ⬇ pull | Download/update the skills this repo requires. |
 | `astra skills check` | — | Report missing or outdated skills. |
 | `astra skills check --ci` | — | Same, but exit non-zero on any problem (fails the PR). |
@@ -64,6 +64,23 @@ skills/
 
 Rule of thumb: a skill lives in `common/` if the rule is the same across repos;
 it lives in a project folder only if that project genuinely does it differently.
+
+## Onboarding a repo (`init` wizard)
+
+`astra skills init` runs a short wizard — no flags to remember:
+
+1. It suggests a project name from `package.json`'s `name` (if present); you
+   press Enter to accept or type a different one (or type one from scratch when
+   there's no `package.json`).
+2. If the name **matches** an existing project, it pins that project's skills and
+   writes `.astra.yml`.
+3. If the name is **new**, it scaffolds `skills/<name>/conventions/`, adds the
+   project to `policy.yml`, and opens a **PR** on the central repo to register
+   it — while setting the repo up locally right away. Until that PR merges,
+   `sync` shows the project's own skill as *pending central registration*.
+
+Non-interactive use (CI/scripts): `--project <name>` skips the prompt and
+`--yes` skips confirmations.
 
 ## Publishing a skill change
 

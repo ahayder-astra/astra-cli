@@ -6,6 +6,7 @@ import { sync } from "./commands/sync";
 import { check } from "./commands/check";
 import { doctor } from "./commands/doctor";
 import { publish } from "./commands/publish";
+import { closePrompts } from "./lib/prompt";
 
 const program = new Command();
 
@@ -22,9 +23,9 @@ const skills = program
 
 skills
   .command("init")
-  .description("Bootstrap Astra in the current repo (creates .astra.yml).")
-  .option("-p, --project <project>", "which project this repo is")
-  .option("-y, --yes", "skip the confirmation prompt")
+  .description("Set up this repo (interactive wizard; creates .astra.yml).")
+  .option("-p, --project <project>", "skip the name prompt and use this project")
+  .option("-y, --yes", "skip confirmation prompts")
   .option("-f, --force", "overwrite an existing .astra.yml")
   .action((opts) => init(opts));
 
@@ -60,6 +61,8 @@ async function main() {
   } catch (err) {
     console.error(pc.red((err as Error).message));
     process.exit(1);
+  } finally {
+    closePrompts();
   }
 }
 

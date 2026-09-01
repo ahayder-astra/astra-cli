@@ -133,3 +133,78 @@ export function defaultBranch(dir: string): string {
 }
 
 export const gitIn = git;
+
+/** True if a project folder (`skills/<name>/`) exists in the given root. */
+export function projectExists(name: string, root = skillsRoot()): boolean {
+  return fs.existsSync(path.join(root, name));
+}
+
+/**
+ * Scaffold a brand-new project in a registry clone: create a starter
+ * `conventions` skill and register the project in policy.yml. Returns the
+ * relative paths that were created/changed (for `git add`).
+ */
+export function scaffoldProject(regDir: string, name: string): string[] {
+  const skillDir = path.join(regDir, "skills", name, "conventions");
+  fs.mkdirSync(skillDir, { recursive: true });
+  writeSkillMeta(skillDir, {
+    name: "conventions",
+    version: "1.0.0",
+    description: `${name} coding conventions.`,
+  });
+  fs.writeFileSync(
+    path.join(skillDir, "SKILL.md"),
+    `# ${name} conventions\n\nConventions for the ${name} project.\n\n## Rules\n\n- TODO: add this project's conventions.\n`,
+    "utf8"
+  );
+
+  // Register the project in policy.yml (js-yaml round-trip; header re-added).
+  const policyPath = path.join(regDir, "skills", "policy.yml");
+  const policy = yaml.load(fs.readFileSync(policyPath, "utf8")) as Policy;
+  policy.projects = policy.projects ?? {};
+  policy.projects[name] = ["conventions"];
+  const header =
+    "# policy.yml — the central skill policy.\n" +
+    "# `common` applies to every repo; `projects` lists each project's own skills.\n" +
+    "# Versions live in each skill's skill.yml, not here.\n\n";
+  fs.writeFileSync(policyPath, header + yaml.dump(policy, { sortKeys: false }), "utf8");
+
+  return [path.join("skills", name), path.join("skills", "policy.yml")];
+}
+
+export interface PrRequest {
+  branch: string;
+  addPaths: string[];
+  commitMsg: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * Commit the given paths on a new branch, push, and open a PR. Returns the PR
+ * URL, or null if the branch pushed but `gh` could not open the PR (caller
+ * prints fallback instructions). Throws if the git steps themselves fail.
+ */
+export function commitAndOpenPr(regDir: string, req: PrRequest): string | null {
+  const base = defaultBranch(regDir);
+  try {
+    git(["checkout", "-b", req.branch], regDir);
+    git(["add", ...req.addPaths], regDir);
+    git(["commit", "-m", req.commitMsg], regDir);
+    git(["push", "-u", "origin", req.branch], regDir);
+  } catch (err) {
+    throw new Error(
+      `Git failed while publishing (${(err as Error).message.split("\n")[0]}). ` +
+        `The branch may already exist — try again after a sync.`
+    );
+  }
+  try {
+    return execFileSync(
+      "gh",
+      ["pr", "create", "--base", base, "--head", req.branch, "--title", req.title, "--body", req.body],
+      { cwd: regDir, encoding: "utf8" }
+    ).trim();
+  } catch {
+    return null;
+  }
+}

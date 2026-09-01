@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import pc from "picocolors";
@@ -6,9 +5,8 @@ import { SKILLS_DIR } from "../lib/config";
 import { copyFiles, foldersEqual } from "../lib/fsutil";
 import { promptBump } from "../lib/prompt";
 import {
-  defaultBranch,
+  commitAndOpenPr,
   ensureWorkRegistry,
-  gitIn,
   readSkillMeta,
   splitSkillId,
   writeSkillMeta,
@@ -90,34 +88,25 @@ export async function publish(
     description: consumerMeta.description ?? central.description,
   });
 
-  // 7. Branch, commit, push.
+  // 7. Branch, commit, push, and open a PR.
   const branch = `skill/${id.replace(/\//g, "-")}-${newVersion}`;
-  const base = defaultBranch(regDir);
-  try {
-    gitIn(["checkout", "-b", branch], regDir);
-    gitIn(["add", path.join("skills", rel)], regDir);
-    gitIn(["commit", "-m", `Update ${id} to ${newVersion}`], regDir);
-    gitIn(["push", "-u", "origin", branch], regDir);
-  } catch (err) {
-    throw new Error(
-      `Git failed while publishing (${(err as Error).message.split("\n")[0]}). ` +
-        `The branch may already exist — try again after a sync.`
-    );
-  }
+  const url = commitAndOpenPr(regDir, {
+    branch,
+    addPaths: [path.join("skills", rel)],
+    commitMsg: `Update ${id} to ${newVersion}`,
+    title: `Update ${id} to ${newVersion}`,
+    body:
+      `Publishes ${id}@${newVersion} (was ${centralVersion}).\n\n` +
+      `Opened by \`astra skills publish\`.`,
+  });
+  reportPr(url, branch);
+}
 
-  // 8. Open a PR (best effort; fall back to instructions if gh is unavailable).
-  const title = `Update ${id} to ${newVersion}`;
-  const body =
-    `Publishes ${id}@${newVersion} (was ${centralVersion}).\n\n` +
-    `Opened by \`astra skills publish\`.`;
-  try {
-    const url = execFileSync(
-      "gh",
-      ["pr", "create", "--base", base, "--head", branch, "--title", title, "--body", body],
-      { cwd: regDir, encoding: "utf8" }
-    ).trim();
+/** Print the PR URL, or fallback instructions if gh couldn't open it. */
+export function reportPr(url: string | null, branch: string): void {
+  if (url) {
     console.log(pc.green("\nOpened PR:"), url);
-  } catch {
+  } else {
     console.log(
       pc.yellow("\nPushed branch ") +
         pc.cyan(branch) +

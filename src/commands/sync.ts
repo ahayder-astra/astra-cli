@@ -20,7 +20,17 @@ export function sync(): void {
 
   let changed = 0;
   for (const [id] of entries) {
-    const version = installSkill(id);
+    let version: string;
+    try {
+      version = installSkill(id);
+    } catch {
+      // The skill isn't in the registry yet — e.g. a new project's own skill
+      // whose registration PR hasn't merged. Keep any local copy and move on.
+      console.log(
+        `  ${pc.yellow("?")} ${id} ${pc.dim("pending central registration")}`
+      );
+      continue;
+    }
     if (installed[id] === version) {
       console.log(`  ${pc.dim("=")} ${id} ${pc.dim(version)} (up to date)`);
     } else {
