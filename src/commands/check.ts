@@ -16,7 +16,7 @@ interface Row {
 }
 
 /**
- * Compare what `.astra.yml` requires against what is actually installed.
+ * Compare what `.astra/config.yml` requires against what is actually installed.
  * Prints a report. In --ci mode, exits non-zero if anything is wrong so the
  * pipeline fails — this is the "hard enforcement" layer.
  */

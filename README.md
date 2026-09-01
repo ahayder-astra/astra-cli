@@ -27,7 +27,7 @@ Then run it with `npx`, or wire it into your scripts and CI:
 ```
 
 ```bash
-npx astra skills init      # onboard the repo (writes .astra.yml)
+npx astra skills init      # onboard the repo (writes .astra/config.yml)
 npx astra skills sync       # pull the skills this repo requires
 ```
 
@@ -46,7 +46,7 @@ node dist/index.js skills doctor
 
 | Command | Direction | What it does |
 |---|---|---|
-| `astra skills init` | — | Interactive wizard: pick the project (suggested from package.json), create `.astra.yml`; registers a brand-new project via PR. |
+| `astra skills init` | — | Interactive wizard: pick the project (suggested from package.json), create `.astra/config.yml`; registers a brand-new project via PR. |
 | `astra skills sync` | ⬇ pull | Download/update the skills this repo requires. |
 | `astra skills check` | — | Report missing or outdated skills. |
 | `astra skills check --ci` | — | Same, but exit non-zero on any problem (fails the PR). |
@@ -54,7 +54,7 @@ node dist/index.js skills doctor
 | `astra skills new <name>` | — | Scaffold a new skill in this repo (publish it later to register centrally). |
 | `astra skills publish <name>` | ⬆ push | Publish a skill to central via PR — bumps an existing skill, or registers a brand-new one. |
 
-## The contract: `.astra.yml`
+## The contract: `.astra/config.yml`
 
 Committed to each repo and version-controlled like `package.json`. It is the
 source of truth for what that repo requires — never changed silently.
@@ -100,7 +100,7 @@ it lives in a project folder only if that project genuinely does it differently.
    press Enter to accept or type a different one (or type one from scratch when
    there's no `package.json`).
 2. If the name **matches** an existing project, it pins that project's skills and
-   writes `.astra.yml`.
+   writes `.astra/config.yml`.
 3. If the name is **new**, it scaffolds `skills/<name>/conventions/`, adds the
    project to `policy.yml`, and opens a **PR** on the central repo to register
    it — while setting the repo up locally right away. Until that PR merges,
@@ -157,7 +157,7 @@ src/
   index.ts            # commander — wires up `astra skills <cmd>`
   commands/           # init · sync · check · doctor · publish
   lib/
-    config.ts         # read/write .astra.yml
+    config.ts         # read/write .astra/config.yml
     installed.ts      # tracks what sync wrote (manifest.json)
     paths.ts          # package/registry path + config resolution
     registry.ts       # read policy/skills; scoped ids; clone central for publish
@@ -169,7 +169,7 @@ src/
 
 ## Not built yet
 
-- `astra skills upgrade` — bump `.astra.yml` to central's latest versions (for
-  now, hand-edit `.astra.yml` then `sync`).
+- `astra skills upgrade` — bump `.astra/config.yml` to central's latest versions (for
+  now, hand-edit `.astra/config.yml` then `sync`).
 - Strict historical pinning — `sync` installs central's current version; exact
   older versions via git tags is a future enhancement.

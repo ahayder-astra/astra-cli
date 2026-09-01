@@ -100,7 +100,7 @@ function matchProject(name: string, known: string[]): string | undefined {
   return known.find((p) => p.toLowerCase() === name.toLowerCase());
 }
 
-/** Existing project: pin common + the project's skills and write .astra.yml. */
+/** Existing project: pin common + the project's skills and write .astra/config.yml. */
 async function adopt(
   name: string,
   options: InitOptions,

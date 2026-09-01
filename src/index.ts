@@ -24,10 +24,10 @@ const skills = program
 
 skills
   .command("init")
-  .description("Set up this repo (interactive wizard; creates .astra.yml).")
+  .description("Set up this repo (interactive wizard; creates .astra/config.yml).")
   .option("-p, --project <project>", "skip the name prompt and use this project")
   .option("-y, --yes", "skip confirmation prompts")
-  .option("-f, --force", "overwrite an existing .astra.yml")
+  .option("-f, --force", "overwrite an existing .astra/config.yml")
   .action((opts) => init(opts));
 
 skills
