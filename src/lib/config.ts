@@ -53,7 +53,7 @@ export function configExists(repoRoot: string = process.cwd()): boolean {
 export function readConfig(repoRoot: string = process.cwd()): AstraConfig {
   const file = existingConfigPath(repoRoot);
   if (!file) {
-    throw new Error(`No ${CONFIG_FILE} found. Run \`astra skills init\` first.`);
+    throw new Error(`No ${CONFIG_FILE} found. Run \`astra init\` first.`);
   }
 
   const raw = yaml.load(fs.readFileSync(file, "utf8"));

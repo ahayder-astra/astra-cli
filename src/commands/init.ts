@@ -14,6 +14,8 @@ import {
 } from "../lib/registry";
 import { writeInstalled } from "../lib/installed";
 import { reportPr } from "./publish";
+import { telemetryUrl } from "../lib/paths";
+import { installTelemetryHooks, LOCAL_TELEMETRY_DIR } from "../lib/hooks";
 
 interface InitOptions {
   project?: string;
@@ -85,13 +87,38 @@ export async function init(options: InitOptions = {}): Promise<void> {
     canonical = matchProject(name, knownProjects());
   }
 
+  let wrote: boolean;
   if (canonical) {
     if (canonical !== name) {
       console.log(pc.dim(`Matched "${name}" → ${canonical}`));
     }
-    await adopt(canonical, options, repoRoot);
+    wrote = await adopt(canonical, options, repoRoot);
   } else {
-    await createNew(name, options, repoRoot);
+    wrote = await createNew(name, options, repoRoot);
+  }
+
+  // Hooks are a peer of skills: skills bring guidance in, hooks send telemetry
+  // out. Only wire them up once the repo was actually initialized.
+  if (wrote) installHooksStep(repoRoot);
+}
+
+/**
+ * Install the activity-telemetry hooks (always). Events go to
+ * ASTRA_TELEMETRY_URL when set, otherwise to a local JSONL sink under the repo;
+ * report.js resolves the same at runtime.
+ */
+function installHooksStep(repoRoot: string): void {
+  const result = installTelemetryHooks(repoRoot);
+  const url = telemetryUrl();
+  const dest = url ? url : `local ${LOCAL_TELEMETRY_DIR}/`;
+
+  if (result === "installed") {
+    console.log(pc.green(`Installed activity hooks → ${pc.dim(dest)}`));
+  } else {
+    console.log(pc.dim(`Activity hooks already configured → ${dest}`));
+  }
+  if (!url) {
+    console.log(pc.dim("Set ASTRA_TELEMETRY_URL to send events remotely."));
   }
 }
 
@@ -100,12 +127,15 @@ function matchProject(name: string, known: string[]): string | undefined {
   return known.find((p) => p.toLowerCase() === name.toLowerCase());
 }
 
-/** Existing project: pin common + the project's skills and write .astra/config.yml. */
+/**
+ * Existing project: pin common + the project's skills and write
+ * .astra/config.yml. Returns true if the config was written (false on abort).
+ */
 async function adopt(
   name: string,
   options: InitOptions,
   repoRoot: string
-): Promise<void> {
+): Promise<boolean> {
   console.log(`Project: ${pc.cyan(name)} ${pc.dim("(existing)")}`);
   const skills = skillsForProject(name);
   console.log(pc.dim("Will require:"));
@@ -116,24 +146,28 @@ async function adopt(
 
   if (!options.yes && !(await confirm(`Create ${CONFIG_FILE} with these skills?`))) {
     console.log(pc.dim("Aborted."));
-    return;
+    return false;
   }
 
   writeConfig({ project: name, skills }, repoRoot);
   console.log(pc.green(`Created ${CONFIG_FILE}.`));
   console.log(pc.dim("Next: run `astra skills sync` to download the skills."));
+  return true;
 }
 
-/** New project: scaffold + register centrally via PR, then set up locally. */
+/**
+ * New project: scaffold + register centrally via PR, then set up locally.
+ * Returns true if the config was written (false on abort).
+ */
 async function createNew(
   name: string,
   options: InitOptions,
   repoRoot: string
-): Promise<void> {
+): Promise<boolean> {
   console.log(`Project ${pc.cyan(name)} ${pc.yellow("isn't in Astra yet.")}`);
   if (!options.yes && !(await confirm(`Create and register project "${name}"?`))) {
     console.log(pc.dim("Aborted."));
-    return;
+    return false;
   }
 
   // Register centrally: scaffold a starter skill + policy entry, open a PR.
@@ -147,7 +181,7 @@ async function createNew(
     title: `Add project ${name}`,
     body:
       `Registers a new project "${name}" with a starter conventions skill.\n\n` +
-      `Opened by \`astra skills init\`.`,
+      `Opened by \`astra init\`.`,
   });
 
   // Set up locally from the clone's working tree (which has the new skill on the
@@ -170,4 +204,5 @@ async function createNew(
   console.log(
     pc.dim("Once the PR merges, the project is official for everyone.")
   );
+  return true;
 }

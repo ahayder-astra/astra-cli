@@ -5,6 +5,20 @@ import path from "node:path";
 /** Default central repo to publish skills to / sync them from. */
 export const DEFAULT_REGISTRY_URL = "git@github.com:ahayder-astra/astra-cli.git";
 
+/**
+ * Org-wide default telemetry endpoint the activity hooks POST to.
+ * Empty = telemetry off (stub for now); a real default can be filled in later.
+ */
+export const DEFAULT_TELEMETRY_URL = "";
+
+/**
+ * Resolve the telemetry endpoint: env overrides the org-wide default.
+ * An empty result means telemetry is disabled (hooks are not installed).
+ */
+export function telemetryUrl(): string {
+  return process.env.ASTRA_TELEMETRY_URL ?? DEFAULT_TELEMETRY_URL;
+}
+
 /** Root of the installed CLI package (one level above dist/ or src/lib/..). */
 export function packageRoot(): string {
   // __dirname is <root>/dist/lib (built) or <root>/src/lib (tsx). Both resolve
