@@ -1,6 +1,7 @@
 import pc from "picocolors";
 import { readConfig } from "../lib/config";
 import { readInstalled } from "../lib/installed";
+import { ensureSetup } from "../lib/setup";
 
 interface CheckOptions {
   ci?: boolean;
@@ -20,7 +21,8 @@ interface Row {
  * Prints a report. In --ci mode, exits non-zero if anything is wrong so the
  * pipeline fails — this is the "hard enforcement" layer.
  */
-export function check(options: CheckOptions = {}): void {
+export async function check(options: CheckOptions = {}): Promise<void> {
+  if (!(await ensureSetup())) return;
   const config = readConfig();
   const installed = readInstalled();
 

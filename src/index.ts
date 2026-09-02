@@ -84,7 +84,7 @@ skills
   .action(() => doctor());
 
 skills
-  .command("publish <name>")
+  .command("publish [name]")
   .description("Publish local edits to a skill back to central as a new version (via PR).")
   .option("--patch", "bump the patch version")
   .option("--minor", "bump the minor version")
@@ -93,18 +93,20 @@ skills
   .addHelpText(
     "after",
     examples(
-      "astra skills publish AnimoFrontend/conventions",
+      "astra skills publish                    pick a skill from this repo",
+      "astra skills publish conventions        match by bare name",
       "astra skills publish common/testing --minor"
     )
   )
   .action((name, opts) => publish(name, opts));
 
 skills
-  .command("new <name>")
+  .command("new [name]")
   .description("Scaffold a new skill in this repo (publish it later to register centrally).")
   .addHelpText(
     "after",
     examples(
+      "astra skills new                       prompt for name + scope",
       "astra skills new test-skill            scope to this repo's project",
       "astra skills new common/formatting     a shared (common) skill"
     )

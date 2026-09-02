@@ -1,78 +1,106 @@
-import readline from "node:readline";
-import type { BumpKind } from "./semver";
+import {
+  confirm as clackConfirm,
+  select,
+  text,
+  isCancel,
+  cancel,
+} from "@clack/prompts";
+import { bump, type BumpKind } from "./semver";
 
-// A single readline interface with a persistent `line` listener feeding a
-// queue. Using rl.question directly loses lines that arrive (e.g. from a pipe)
-// between questions; buffering every line into a queue avoids that race.
-let rl: readline.Interface | null = null;
-let closed = false;
-const lineQueue: string[] = [];
-const waiters: ((line: string) => void)[] = [];
+/**
+ * The prompt layer, built on @clack/prompts. Interactive prompts assume a real
+ * terminal — callers should gate on `isInteractive()` and fail with a precise,
+ * actionable message when there isn't one (a pipe or CI), rather than letting a
+ * prompt hang. Every prompt handles Ctrl-C as a clean cancel, not a stack trace.
+ */
 
-function ensureReadline(): void {
-  if (rl) return;
-  rl = readline.createInterface({ input: process.stdin });
-  rl.on("line", (line) => {
-    const waiter = waiters.shift();
-    if (waiter) waiter(line);
-    else lineQueue.push(line);
-  });
-  rl.on("close", () => {
-    closed = true;
-    while (waiters.length) waiters.shift()!("");
-  });
+/** True when a human is at the terminal (vs. a pipe / CI redirect). */
+export function isInteractive(): boolean {
+  return Boolean(process.stdin.isTTY);
 }
 
-function nextLine(): Promise<string> {
-  ensureReadline();
-  if (lineQueue.length) return Promise.resolve(lineQueue.shift()!);
-  if (closed) return Promise.resolve("");
-  return new Promise((resolve) => waiters.push(resolve));
+/** Unwrap a clack answer, exiting cleanly if the user cancelled (Ctrl-C). */
+function guard<T>(value: T | symbol): T {
+  if (isCancel(value)) {
+    cancel("Cancelled.");
+    process.exit(0);
+  }
+  return value as T;
 }
 
-async function ask(question: string): Promise<string> {
-  ensureReadline();
-  process.stdout.write(question);
-  return (await nextLine()).trim();
-}
-
-/** Close the shared prompt interface so the process can exit. Safe if unused. */
-export function closePrompts(): void {
-  if (rl) {
-    rl.close();
-    rl = null;
+/** Guard against a prompt being reached without a terminal (would hang). */
+function requireTty(): void {
+  if (!isInteractive()) {
+    throw new Error("This step needs an interactive terminal.");
   }
 }
 
-/** Ask a yes/no question on the terminal. Returns true for yes. */
+/** Kept for callers' `finally` blocks; clack needs no teardown. */
+export function closePrompts(): void {
+  /* no-op */
+}
+
+/** Ask a yes/no question. Returns true for yes. */
 export async function confirm(question: string): Promise<boolean> {
-  const answer = await ask(`${question} (y/N) `);
-  return /^y(es)?$/i.test(answer);
+  requireTty();
+  return guard(await clackConfirm({ message: question }));
+}
+
+/** One choice in a `promptSelect` list. */
+export interface SelectOption {
+  value: string;
+  label?: string;
+  hint?: string;
 }
 
 /**
- * Ask for a line of text. If a default is given, an empty answer returns it;
- * otherwise the prompt repeats until non-empty. Throws at end-of-input rather
- * than looping when there's no default (e.g. piped stdin ran out).
+ * Arrow-key single-select. Options may be plain strings or `{value,label,hint}`.
+ * Returns the chosen value.
+ */
+export async function promptSelect(
+  message: string,
+  options: (string | SelectOption)[]
+): Promise<string> {
+  requireTty();
+  const opts = options.map((o) => (typeof o === "string" ? { value: o } : o));
+  return guard(await select({ message, options: opts })) as string;
+}
+
+/**
+ * Ask for a line of text. With a default, an empty answer returns it; without
+ * one, the answer is required.
  */
 export async function promptText(
   question: string,
   defaultValue?: string
 ): Promise<string> {
-  const suffix = defaultValue ? ` [${defaultValue}]` : "";
-  for (;;) {
-    const answer = await ask(`${question}${suffix}: `);
-    if (answer) return answer;
-    if (defaultValue) return defaultValue;
-    if (closed) throw new Error("No project name provided.");
-  }
+  requireTty();
+  const answer = guard(
+    await text({
+      message: question,
+      placeholder: defaultValue,
+      defaultValue,
+      validate: defaultValue
+        ? undefined
+        : (v) => (v && v.length ? undefined : "Please enter a value."),
+    })
+  );
+  return answer || defaultValue || "";
 }
 
-/** Ask which part of the version to bump. Empty answer defaults to patch. */
+/** Ask which part of the version to bump, showing the resulting version. */
 export async function promptBump(current: string): Promise<BumpKind> {
-  const answer = (
-    await ask(`Version bump for ${current}? [patch]/minor/major: `)
-  ).toLowerCase();
-  if (answer === "minor" || answer === "major") return answer;
-  return "patch";
+  requireTty();
+  const kinds: BumpKind[] = ["patch", "minor", "major"];
+  return guard(
+    await select<BumpKind>({
+      message: `Version bump for ${current}?`,
+      initialValue: "patch",
+      options: kinds.map((kind) => ({
+        value: kind,
+        label: kind,
+        hint: `${current} → ${bump(current, kind)}`,
+      })),
+    })
+  );
 }

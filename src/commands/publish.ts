@@ -15,6 +15,7 @@ import {
 } from "../lib/registry";
 import { bump, BumpKind } from "../lib/semver";
 import { readInstalled } from "../lib/installed";
+import { resolveInstalledSkill } from "../lib/resolve";
 
 interface PublishOptions {
   patch?: boolean;
@@ -37,9 +38,12 @@ function chosenBump(options: PublishOptions): BumpKind | null {
  * central has moved ahead of the version this repo synced from.
  */
 export async function publish(
-  id: string,
+  nameArg: string | undefined,
   options: PublishOptions = {}
 ): Promise<void> {
+  // Resolve the argument to an installed, scoped skill id — prompting the human
+  // when it's missing or ambiguous, failing fast with a clear list under CI.
+  const id = await resolveInstalledSkill(nameArg);
   const [, skillName] = splitSkillId(id);
   const rel = path.join(...id.split("/"));
   const consumerRoot = process.cwd();

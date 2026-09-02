@@ -2,13 +2,15 @@ import pc from "picocolors";
 import { readConfig } from "../lib/config";
 import { readInstalled, writeInstalled } from "../lib/installed";
 import { installSkill } from "../lib/registry";
+import { ensureSetup } from "../lib/setup";
 
 /**
  * Download/update the skills required by `.astra/config.yml` into the repo, copying
  * real content from the registry, then record what was installed so `check`
  * can verify it.
  */
-export function sync(): void {
+export async function sync(): Promise<void> {
+  if (!(await ensureSetup())) return;
   const config = readConfig();
   const installed = readInstalled();
   const entries = Object.entries(config.skills);
