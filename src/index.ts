@@ -16,19 +16,21 @@ program
   .description("Astra CLI — keep every repo on Astra's engineering standards.")
   .version("0.1.0");
 
+// `astra init` — wire up the repo: run the project wizard (skills in) and install
+// the activity hooks (telemetry out). Skills and hooks are peers of `init`.
+program
+  .command("init")
+  .description("Set up this repo: project wizard (.astra/config.yml) + activity hooks.")
+  .option("-p, --project <project>", "skip the name prompt and use this project")
+  .option("-y, --yes", "skip confirmation prompts")
+  .option("-f, --force", "overwrite an existing .astra/config.yml")
+  .action((opts) => init(opts));
+
 // `astra skills ...` — the skills command group. New groups (e.g. `astra config`)
 // can be added alongside this one without touching existing commands.
 const skills = program
   .command("skills")
   .description("Manage this repo's required AI skills.");
-
-skills
-  .command("init")
-  .description("Set up this repo (interactive wizard; creates .astra/config.yml).")
-  .option("-p, --project <project>", "skip the name prompt and use this project")
-  .option("-y, --yes", "skip confirmation prompts")
-  .option("-f, --force", "overwrite an existing .astra/config.yml")
-  .action((opts) => init(opts));
 
 skills
   .command("sync")

@@ -8,7 +8,7 @@ export function doctor(): void {
 
   if (!configExists()) {
     console.log(`  ${pc.red("✗")} ${CONFIG_FILE} not found`);
-    console.log(pc.dim("\n  Run `astra skills init` to get started."));
+    console.log(pc.dim("\n  Run `astra init` to get started."));
     return;
   }
   console.log(`  ${pc.green("✓")} ${CONFIG_FILE} found`);

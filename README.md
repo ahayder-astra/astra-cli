@@ -27,7 +27,7 @@ Then run it with `npx`, or wire it into your scripts and CI:
 ```
 
 ```bash
-npx astra skills init      # onboard the repo (writes .astra/config.yml)
+npx astra init             # onboard the repo (writes .astra/config.yml + hooks)
 npx astra skills sync       # pull the skills this repo requires
 ```
 
@@ -46,7 +46,7 @@ node dist/index.js skills doctor
 
 | Command | Direction | What it does |
 |---|---|---|
-| `astra skills init` | — | Interactive wizard: pick the project (suggested from package.json), create `.astra/config.yml`; registers a brand-new project via PR. |
+| `astra init` | — | Wire up the repo: interactive wizard to pick the project (suggested from package.json) and create `.astra/config.yml` (registers a brand-new project via PR), then install the activity-telemetry hooks when an endpoint is configured. |
 | `astra skills sync` | ⬇ pull | Download/update the skills this repo requires. |
 | `astra skills check` | — | Report missing or outdated skills. |
 | `astra skills check --ci` | — | Same, but exit non-zero on any problem (fails the PR). |
@@ -92,9 +92,9 @@ skills/
 Rule of thumb: a skill lives in `common/` if the rule is the same across repos;
 it lives in a project folder only if that project genuinely does it differently.
 
-## Onboarding a repo (`init` wizard)
+## Onboarding a repo (`astra init`)
 
-`astra skills init` runs a short wizard — no flags to remember:
+`astra init` runs a short wizard — no flags to remember:
 
 1. It suggests a project name from `package.json`'s `name` (if present); you
    press Enter to accept or type a different one (or type one from scratch when
@@ -108,6 +108,25 @@ it lives in a project folder only if that project genuinely does it differently.
 
 Non-interactive use (CI/scripts): `--project <name>` skips the prompt and
 `--yes` skips confirmations.
+
+### Activity hooks (telemetry out)
+
+After writing the contract, `astra init` also installs activity-telemetry hooks
+(once, idempotently): it writes `.astra/hooks/report.js` and wires it into
+`.claude/settings.json` under `PostToolUse` and `Stop`. On each event the hook
+fire-and-forget reports `{ agent, tool, project, branch, commit }`.
+
+The hooks are **always installed** — the destination just depends on config:
+
+- **`ASTRA_TELEMETRY_URL` set** → the event is POSTed to that endpoint.
+- **unset** → the event is appended as one JSON line to a local sink at
+  `.astra/telemetry/events.jsonl` (per repo — each project logs to its own root).
+
+Either way it's best-effort and never blocks Claude. If skills are guidance
+*in*, hooks are telemetry *out* — peers, both wired up by `init`.
+
+> Note: `.astra/telemetry/` is **not** auto-git-ignored. Add it to `.gitignore`
+> yourself if you don't want local event logs committed.
 
 ## Publishing a skill change
 
@@ -149,17 +168,19 @@ registration* and leaves your local copy untouched.
 | `ASTRA_REGISTRY_URL` | `git@github.com:ahayder-astra/astra-cli.git` | Central repo to clone/push. |
 | `ASTRA_REGISTRY_DIR` | `~/.astra/registry` | Local clone used for publishing. |
 | `ASTRA_HOME` | `~/.astra` | Base dir for CLI state. |
+| `ASTRA_TELEMETRY_URL` | _(unset — local sink)_ | Endpoint the activity hooks POST to. When unset, events append to `.astra/telemetry/events.jsonl`. Read by `report.js` at runtime. |
 
 ## Where things live in the code
 
 ```
 src/
-  index.ts            # commander — wires up `astra skills <cmd>`
-  commands/           # init · sync · check · doctor · publish
+  index.ts            # commander — wires up `astra init` + `astra skills <cmd>`
+  commands/           # init · sync · check · doctor · publish · new
   lib/
     config.ts         # read/write .astra/config.yml
+    hooks.ts          # write .astra/hooks/report.js + wire .claude/settings.json
     installed.ts      # tracks what sync wrote (manifest.json)
-    paths.ts          # package/registry path + config resolution
+    paths.ts          # package/registry/telemetry path + config resolution
     registry.ts       # read policy/skills; scoped ids; clone central for publish
     policy.ts         # resolve project -> required skills (+ versions)
     semver.ts         # version bumping
